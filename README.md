@@ -1,106 +1,122 @@
-# Shopify App Template - React Router
+# Volume Discount App
 
-This is a template for building a [Shopify app](https://shopify.dev/docs/apps/getting-started) using [React Router](https://reactrouter.com/).  It was forked from the [Shopify Remix app template](https://github.com/Shopify/shopify-app-template-remix) and converted to React Router.
+A Shopify app that creates "Buy 2, get X% off" automatic discounts using Shopify Functions. Merchants can configure which products qualify and what discount percentage to apply through an admin UI.
 
-Rather than cloning this repo, follow the [Quick Start steps](https://github.com/Shopify/shopify-app-template-react-router#quick-start).
+## Features
 
-Visit the [`shopify.dev` documentation](https://shopify.dev/docs/api/shopify-app-react-router) for more details on the React Router app package.
+- 🎯 **Admin Configuration**: Select products and set discount percentage (1-80%) through an intuitive UI
+- 🛒 **Automatic Discounts**: Applies discounts automatically when customers add qualifying products to cart
+- 📦 **Minimum Quantity**: Requires customers to buy at least 2 units to receive the discount
+- 🎨 **Product Page Widget**: Shows "Buy 2, get X% off" message on qualifying product pages
+- 💾 **Metafield Storage**: Configuration stored in shop metafields for reliability
 
-## Upgrading from Remix
-
-If you have an existing Remix app that you want to upgrade to React Router, please follow the [upgrade guide](https://github.com/Shopify/shopify-app-template-react-router/wiki/Upgrading-from-Remix).  Otherwise, please follow the quick start guide below.
-
-## Quick start
+## Quick Start
 
 ### Prerequisites
 
-Before you begin, you'll need the following:
+1. **Node.js**: [Download and install](https://nodejs.org/en/download/) (v18 or higher recommended)
+2. **Shopify Partner Account**: [Create an account](https://partners.shopify.com/signup)
+3. **Development Store**: [Create a development store](https://help.shopify.com/en/partners/dashboard/development-stores#create-a-development-store)
+4. **Shopify CLI**: Install globally
+   ```bash
+   npm install -g @shopify/cli@latest
+   ```
 
-1. **Node.js**: [Download and install](https://nodejs.org/en/download/) it if you haven't already.
-2. **Shopify Partner Account**: [Create an account](https://partners.shopify.com/signup) if you don't have one.
-3. **Test Store**: Set up either a [development store](https://help.shopify.com/en/partners/dashboard/development-stores#create-a-development-store) or a [Shopify Plus sandbox store](https://help.shopify.com/en/partners/dashboard/managing-stores/plus-sandbox-store) for testing your app.
-4. **Shopify CLI**: [Download and install](https://shopify.dev/docs/apps/tools/cli/getting-started) it if you haven't already.
-```shell
-npm install -g @shopify/cli@latest
-```
+### Installation
 
-### Setup
+1. Clone this repository:
+   ```bash
+   git clone <your-repo-url>
+   cd volume-discount-app
+   ```
 
-```shell
-shopify app init --template=https://github.com/Shopify/shopify-app-template-react-router
-```
+2. Install dependencies:
+   ```bash
+   npm install
+   ```
 
-### Local Development
+3. Start the development server:
+   ```bash
+   shopify app dev
+   ```
 
-```shell
-shopify app dev
-```
+4. Press **P** to open the app URL and install it on your development store
 
-Press P to open the URL to your app. Once you click install, you can start development.
+5. Navigate to the app in your Shopify admin to configure discounts
 
-Local development is powered by [the Shopify CLI](https://shopify.dev/docs/apps/tools/cli). It logs into your partners account, connects to an app, provides environment variables, updates remote config, creates a tunnel and provides commands to generate extensions.
+## How to Use
 
-### Authenticating and querying data
+### 1. Configure Discount Settings
 
-To authenticate and query data you can use the `shopify` const that is exported from `/app/shopify.server.js`:
+1. Open the app in your Shopify admin
+2. Navigate to the "Discount Configuration" page
+3. Click **"Select Products"** to choose which products should have the volume discount
+4. Set the **Minimum Quantity** (default: 2)
+5. Set the **Discount Percentage** (1-80%)
+6. Click **"Save Configuration"**
 
-```js
-export async function loader({ request }) {
-  const { admin } = await shopify.authenticate.admin(request);
+### 2. Add Widget to Product Pages
 
-  const response = await admin.graphql(`
-    {
-      products(first: 25) {
-        nodes {
-          title
-          description
-        }
-      }
-    }`);
+1. Go to **Online Store > Themes** in your Shopify admin
+2. Click **Customize** on your active theme
+3. Navigate to a product page
+4. Click **Add block** in the product information section
+5. Select **"Volume Discount Widget"** from the app blocks
+6. Save your theme
 
-  const {
-    data: {
-      products: { nodes },
-    },
-  } = await response.json();
+### 3. Test the Discount
 
-  return nodes;
+1. Visit a configured product page - you should see "Buy 2, get X% off"
+2. Add 1 unit to cart - no discount applied
+3. Add 2+ units to cart - discount automatically applies
+4. Check cart/checkout to verify the discount amount
+
+## Configuration Storage
+
+The app stores configuration in a shop metafield:
+
+- **Namespace**: `volume_discount`
+- **Key**: `rules`
+- **Type**: JSON
+- **Structure**:
+  ```json
+  {
+    "products": ["gid://shopify/Product/123", "gid://shopify/Product/456"],
+    "minQty": 2,
+    "percentOff": 10
+  }
+  ```
+
+You can view this metafield using the GraphiQL Admin API:
+```graphql
+query {
+  shop {
+    metafield(namespace: "volume_discount", key: "rules") {
+      value
+    }
+  }
 }
 ```
 
-This template comes pre-configured with examples of:
+## Architecture
 
-1. Setting up your Shopify app in [/app/shopify.server.ts](https://github.com/Shopify/shopify-app-template-react-router/blob/main/app/shopify.server.ts)
-2. Querying data using Graphql. Please see: [/app/routes/app.\_index.tsx](https://github.com/Shopify/shopify-app-template-react-router/blob/main/app/routes/app._index.tsx).
-3. Responding to webhooks. Please see [/app/routes/webhooks.tsx](https://github.com/Shopify/shopify-app-template-react-router/blob/main/app/routes/webhooks.app.uninstalled.tsx).
+### Components
 
-Please read the [documentation for @shopify/shopify-app-react-router](https://shopify.dev/docs/api/shopify-app-react-router) to see what other API's are available.
+1. **Admin UI** (`app/routes/app.discount-config.jsx`)
+   - Product picker for selecting qualifying products
+   - Form inputs for minQty and percentOff
+   - Saves configuration to shop metafield using GraphQL mutation
 
-## Shopify Dev MCP
+2. **Discount Function** (`extensions/volume-discount-function/`)
+   - Runs on `cart.lines.discounts.generate.run` target
+   - Reads configuration from shop metafield
+   - Applies percentage discount to qualifying cart lines
+   - Only applies when quantity >= minQty
 
-This template is configured with the Shopify Dev MCP. This instructs [Cursor](https://cursor.com/), [GitHub Copilot](https://github.com/features/copilot) and [Claude Code](https://claude.com/product/claude-code) and [Google Gemini CLI](https://github.com/google-gemini/gemini-cli) to use the Shopify Dev MCP.  
-
-For more information on the Shopify Dev MCP please read [the  documentation](https://shopify.dev/docs/apps/build/devmcp).
-
-## Deployment
-
-### Application Storage
-
-This template uses [Prisma](https://www.prisma.io/) to store session data, by default using an [SQLite](https://www.sqlite.org/index.html) database.
-The database is defined as a Prisma schema in `prisma/schema.prisma`.
-
-This use of SQLite works in production if your app runs as a single instance.
-The database that works best for you depends on the data your app needs and how it is queried.
-Here’s a short list of databases providers that provide a free tier to get started:
-
-| Database   | Type             | Hosters                                                                                                                                                                                                                               |
-| ---------- | ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| MySQL      | SQL              | [Digital Ocean](https://www.digitalocean.com/products/managed-databases-mysql), [Planet Scale](https://planetscale.com/), [Amazon Aurora](https://aws.amazon.com/rds/aurora/), [Google Cloud SQL](https://cloud.google.com/sql/docs/mysql) |
-| PostgreSQL | SQL              | [Digital Ocean](https://www.digitalocean.com/products/managed-databases-postgresql), [Amazon Aurora](https://aws.amazon.com/rds/aurora/), [Google Cloud SQL](https://cloud.google.com/sql/docs/postgres)                                   |
-| Redis      | Key-value        | [Digital Ocean](https://www.digitalocean.com/products/managed-databases-redis), [Amazon MemoryDB](https://aws.amazon.com/memorydb/)                                                                                                        |
-| MongoDB    | NoSQL / Document | [Digital Ocean](https://www.digitalocean.com/products/managed-databases-mongodb), [MongoDB Atlas](https://www.mongodb.com/atlas/database)                                                                                                  |
-
-To use one of these, you can use a different [datasource provider](https://www.prisma.io/docs/reference/api-reference/prisma-schema-reference#datasource) in your `schema.prisma` file, or a different [SessionStorage adapter package](https://github.com/Shopify/shopify-api-js/blob/main/packages/shopify-api/docs/guides/session-storage.md).
+3. **Theme App Extension** (`extensions/volume-discount-widget/`)
+   - Liquid template block for product pages
+   - Displays "Buy X, get Y% off" message
+   - Only shows on configured products
 
 ### Build
 
@@ -222,23 +238,35 @@ PRISMA_CLIENT_ENGINE_TYPE=binary
 
 This forces Prisma to use the binary engine mode, which runs the query engine as a separate process and can work via emulation on Windows ARM64.
 
+## Limitations & Next Steps
+
+### Current Limitations
+
+- Discount applies per cart line (not cumulative across multiple products)
+- Minimum quantity is configurable but defaults to 2
+- Widget styling is basic and may need theme-specific adjustments
+- No support for variant-specific discounts
+
+### Potential Enhancements
+
+- Add support for tiered discounts (e.g., Buy 2 get 10% off, Buy 5 get 20% off)
+- Support for collection-based discounts instead of individual products
+- Cart page widget in addition to product page widget
+- Admin dashboard showing discount usage analytics
+- Support for scheduling discounts (start/end dates)
+
+## Tech Stack
+
+- **Framework**: React Router
+- **UI**: Shopify Polaris Web Components
+- **Backend**: Node.js with Shopify App Bridge
+- **Database**: Prisma with SQLite (for session storage)
+- **Extensions**: Shopify Functions + Theme App Extensions
+
 ## Resources
 
-React Router:
-
-- [React Router docs](https://reactrouter.com/home)
-
-Shopify:
-
-- [Intro to Shopify apps](https://shopify.dev/docs/apps/getting-started)
-- [Shopify App React Router docs](https://shopify.dev/docs/api/shopify-app-react-router)
-- [Shopify CLI](https://shopify.dev/docs/apps/tools/cli)
-- [Shopify App Bridge](https://shopify.dev/docs/api/app-bridge-library).
-- [Polaris Web Components](https://shopify.dev/docs/api/app-home/polaris-web-components).
-- [App extensions](https://shopify.dev/docs/apps/app-extensions/list)
-- [Shopify Functions](https://shopify.dev/docs/api/functions)
-
-Internationalization:
-
-- [Internationalizing your app](https://shopify.dev/docs/apps/best-practices/internationalization/getting-started)
-# volume-discount-app-proveway
+- [Shopify Functions Documentation](https://shopify.dev/docs/api/functions)
+- [Discount Function API](https://shopify.dev/docs/api/functions/reference/cart-and-checkout-validation/graphql/common-objects/discountapplicationstrategy)
+- [Theme App Extensions](https://shopify.dev/docs/apps/online-store/theme-app-extensions)
+- [Metafields Guide](https://shopify.dev/docs/apps/build/custom-data/metafields)
+- [React Router Shopify App Docs](https://shopify.dev/docs/api/shopify-app-react-router)

@@ -1,9 +1,6 @@
 import {
-  DiscountClass,
-  OrderDiscountSelectionStrategy,
   ProductDiscountSelectionStrategy,
 } from '../generated/api';
-
 
 /**
   * @typedef {import("../generated/api").CartInput} RunInput
@@ -16,71 +13,65 @@ import {
   */
 
 export function cartLinesDiscountsGenerateRun(input) {
+  // Return early if no cart lines
   if (!input.cart.lines.length) {
-    return {operations: []};
+    return { operations: [] };
   }
 
-  const hasOrderDiscountClass = input.discount.discountClasses.includes(
-    DiscountClass.Order,
-  );
-  const hasProductDiscountClass = input.discount.discountClasses.includes(
-    DiscountClass.Product,
-  );
-
-  if (!hasOrderDiscountClass && !hasProductDiscountClass) {
-    return {operations: []};
+  // Parse metafield configuration
+  const metafieldValue = input.shop?.metafield?.value;
+  if (!metafieldValue) {
+    // No configuration set, return no discounts
+    return { operations: [] };
   }
 
-  const maxCartLine = input.cart.lines.reduce((maxLine, line) => {
-    if (line.cost.subtotalAmount.amount > maxLine.cost.subtotalAmount.amount) {
-      return line;
-    }
-    return maxLine;
-  }, input.cart.lines[0]);
+  let config;
+  try {
+    config = JSON.parse(metafieldValue);
+  } catch (e) {
+    console.error('Failed to parse volume discount config:', e);
+    return { operations: [] };
+  }
+
+  // Extract configuration values
+  const { products = [], minQty = 2, percentOff = 10 } = config;
+
+  if (!products.length || percentOff <= 0) {
+    return { operations: [] };
+  }
 
   const operations = [];
 
-  if (hasOrderDiscountClass) {
-    operations.push({
-      orderDiscountsAdd: {
-        candidates: [
-          {
-            message: '10% OFF ORDER',
-            targets: [
-              {
-                orderSubtotal: {
-                  excludedCartLineIds: [],
-                },
-              },
-            ],
-            value: {
-              percentage: {
-                value: 10,
-              },
-            },
-          },
-        ],
-        selectionStrategy: OrderDiscountSelectionStrategy.First,
-      },
-    });
-  }
+  // Check each cart line for qualifying products
+  for (const line of input.cart.lines) {
+    const productId = line.merchandise?.product?.id;
 
-  if (hasProductDiscountClass) {
+    // Check if this product is in the configured list
+    if (!productId || !products.includes(productId)) {
+      continue;
+    }
+
+    // Check if quantity meets minimum requirement
+    if (line.quantity < minQty) {
+      continue;
+    }
+
+    // Add discount operation for this cart line
     operations.push({
       productDiscountsAdd: {
         candidates: [
           {
-            message: '20% OFF PRODUCT',
+            message: `Buy ${minQty}, get ${percentOff}% off`,
             targets: [
               {
                 cartLine: {
-                  id: maxCartLine.id,
+                  id: line.id,
                 },
               },
             ],
             value: {
               percentage: {
-                value: 20,
+                value: percentOff,
               },
             },
           },
